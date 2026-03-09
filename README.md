@@ -11,7 +11,15 @@
 ### 1.1 环境配置
 - **.env文件**:
   ```
-  DEEPSEEK_API_KEY=your_api_key_here
+  # AI API Keys
+  # 选择AI类型: DEEPSEEK 或 ANTHROPIC
+  AI_TYPE=DEEPSEEK
+  
+  # DeepSeek API密钥
+  DEEPSEEK_API_KEY=your_deepseek_api_key_here
+  
+  # Anthropic API密钥 (当AI_TYPE=ANTHROPIC时使用)
+  ANTHROPIC_API_KEY=your_anthropic_api_key_here
   ```
 ### 1.2 开发环境启动
 ```bash
@@ -30,7 +38,7 @@ pnpm start
 ### 1.4 技术栈
 - **编程语言**: TypeScript
 - **Web框架**: Express.js
-- **AI集成**: OpenAI SDK (集成DeepSeek API)
+- **AI集成**: OpenAI SDK (集成DeepSeek API和Anthropic API)
 - **环境管理**: dotenv
 - **日志系统**: winston
 - **安全措施**: express-rate-limit
@@ -44,9 +52,10 @@ pnpm start
 └─────────────────┘     └─────────────────┘     └─────────────────┘
         ▲                        │                        │
         │                        │                        │
-        └────────────────────────┘                        │
-                         │                                 │
-                         └─────────────────────────────────┘
+        │                        │     ┌─────────────────┐
+        │                        └────>│ Anthropic API   │
+        │                              └─────────────────┘
+        └─────────────────────────────────────────────────┘
 ```
 
 ## 2. 核心模块功能说明
@@ -55,16 +64,19 @@ pnpm start
 - **功能**: 负责加载和管理环境变量
 - **实现细节**:
   - 使用dotenv加载.env文件中的配置
-  - 设置OPENAI_API_KEY环境变量，确保OpenAI SDK正确初始化
+  - 根据AI_TYPE环境变量选择使用DeepSeek API或Anthropic API
+  - 设置相应的API密钥和基础URL
   - 在所有模块加载之前执行，确保环境变量的可用性
+  - 验证API密钥是否存在，确保系统能够正常运行
 
 ### 2.2 OpenAI服务模块 (`src/openaiService.ts`)
 - **功能**: 封装OpenAI SDK调用，处理AI模型请求
 - **核心功能**:
-  - 初始化OpenAI实例，配置DeepSeek API 
+  - 初始化OpenAI实例，根据AI_TYPE配置相应的API (DeepSeek或Anthropic)
   - 实现聊天对话功能，支持流式响应 (createChatCompletion,createChatCompletionStream)
+  - 根据AI_TYPE自动选择合适的模型
   - 提供详细的日志记录 (记录请求参数、响应数据、错误信息)
-  - 处理API调用错误 (捕获OpenAI SDK异常，返回友好错误提示)s
+  - 处理API调用错误 (捕获OpenAI SDK异常，返回友好错误提示)
 
 ### 2.3 Agent模块 (`src/agent.ts`)
 - **功能**: 维护对话上下文，管理聊天历史
@@ -74,14 +86,28 @@ pnpm start
   - 调用OpenAI服务生成响应 (generateResponse ->createChatCompletionStream)
   - 处理流式响应的回调 (onChunk)
 
-### 2.4 服务器模块 (`src/index.ts`)
+### 2.3 常量模块 (`src/const.ts`)
+- **功能**: 管理系统常量，如模型名称等
+- **实现细节**:
+  - 定义DeepSeek和Anthropic的模型名称
+  - 集中管理常量，便于维护和修改
+
+### 2.4 小红书服务工厂模块 (`src/factory/xiaohongshuService.ts`)
+- **功能**: 生成小红书风格的文案
+- **核心功能**:
+  - 支持8大核心内容场景：美妆护肤、时尚穿搭、旅行攻略、美食探店、家居好物、健身运动、育儿分享、科技数码
+  - 根据不同场景生成定制化的提示词
+  - 调用OpenAI服务生成符合小红书风格的文案
+  - 提供详细的日志记录
+
+### 2.5 服务器模块 (`src/index.ts`)
 - **功能**: 提供HTTP API端点，处理客户端请求
 - **核心功能**:
   - 配置Express中间件 (CORS、JSON解析、日志记录)
-  - 实现API端点 (POST /chat, GET /history, POST /clear, GET /health)
+  - 实现API端点 (POST /chat, GET /history, POST /clear, GET /health, POST /xiaohongshu/copy)
   - 处理请求限流 (express-rate-limit)
   - 提供健康检查 (GET /health)
-  - 全局错误z处理 --中间件(捕获所有未处理异常)
+  - 全局错误处理中间件(捕获所有未处理异常)
 
 ## 3. 主要业务流程
 
@@ -89,7 +115,7 @@ pnpm start
 
 #### 数据流向
 ```
-前端输入 → API请求 → 服务器处理 → Agent处理 → OpenAI服务调用 → DeepSeek API → 流式响应 → 前端展示
+前端输入 → API请求 → 服务器处理 → Agent处理 → OpenAI服务调用 → 选择AI模型 (DeepSeek/Anthropic) → 流式响应 → 前端展示
 ```
 
 #### 处理步骤
@@ -234,9 +260,13 @@ pnpm start
 backend/
 ├── src/
 │   ├── env.ts              # 环境变量配置
+│   ├── const.ts            # 系统常量定义
 │   ├── openaiService.ts    # OpenAI SDK封装
 │   ├── agent.ts            # 对话管理
 │   ├── index.ts            # 服务器主文件
+│   ├── logger.ts           # 日志配置
+│   ├── factory/            # 服务工厂目录
+│   │   └── xiaohongshuService.ts # 小红书文案生成服务
 │   └── openaiService.test.ts # 测试文件
 ├── logs/
 │   ├── combined.log        # 综合日志
@@ -284,19 +314,20 @@ backend/
 
 - **TypeScript**: 提供类型安全，减少运行时错误
 - **Express.js**: 轻量高效，适合构建API服务
-- **OpenAI SDK**: 官方支持，集成方便，功能完善
+- **OpenAI SDK**: 官方支持，集成方便，功能完善，支持多种AI模型
 - **winston**: 强大的日志系统，支持多传输目标
 - **express-rate-limit**: 简单有效的请求限流方案
 - **pnpm**: 高性能包管理器，节省磁盘空间
 
 ## 11. 未来扩展建议
 
-1. **多模型支持**: 集成多个AI模型，根据不同场景选择合适的模型
-2. **会话管理**: 实现用户会话管理，支持多用户同时使用
-3. **工具集成**: 添加更多工具能力，如web搜索、文件处理等
-4. **监控系统**: 实现更完善的监控和告警机制
-5. **缓存系统**: 添加响应缓存，提高系统性能
-6. **文档完善**: 添加Swagger文档，自动生成API文档
+1. **会话管理**: 实现用户会话管理，支持多用户同时使用
+2. **工具集成**: 添加更多工具能力，如web搜索、文件处理等
+3. **监控系统**: 实现更完善的监控和告警机制
+4. **缓存系统**: 添加响应缓存，提高系统性能
+5. **文档完善**: 添加Swagger文档，自动生成API文档
+6. **更多AI模型支持**: 集成更多AI模型，如Google Gemini、Meta Llama等
+7. **智能路由**: 根据请求内容自动选择最合适的AI模型
 
 ## 12. 小红书Agent功能介绍
 
@@ -380,18 +411,21 @@ Day5: 免税店购物 → 返程
 ### 12.4 技术实现
 - **前端**: React + Next.js + TypeScript
 - **后端**: Node.js + Express + TypeScript
-- **AI集成**: OpenAI SDK (集成DeepSeek API)
-- **数据流**: 前端 → 后端API → AI服务 → 流式响应 → 前端展示
+- **AI集成**: OpenAI SDK (集成DeepSeek API和Anthropic API)
+- **服务架构**: 采用工厂模式，将小红书服务封装在独立模块中
+- **数据流**: 前端 → 后端API → 小红书服务工厂 → OpenAI服务 → 选择AI模型 → 流式响应 → 前端展示
 
 ## 13. 总结
 
-本后端系统实现了一个基于DeepSeek API的智能聊天服务，具有以下特点：
+本后端系统实现了一个基于多AI模型的智能聊天服务，具有以下特点：
 
+- **多模型支持**: 集成DeepSeek API和Anthropic API，可根据需求选择合适的AI模型
 - **模块化设计**: 清晰的代码结构，易于维护和扩展
 - **流式响应**: 提供实时的AI响应，提升用户体验
 - **完整的错误处理**: 确保系统在各种异常情况下的稳定性
 - **详细的日志记录**: 便于问题排查和系统监控
 - **安全的配置管理**: 保护敏感信息，防止API滥用
+- **工厂模式架构**: 采用工厂模式封装小红书服务，提高代码复用性和可维护性
 
 系统已经完全搭建完成，可以与前端应用集成使用，为用户提供智能的聊天交互体验。
 
