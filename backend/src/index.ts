@@ -1,11 +1,9 @@
-// 首先加载环境变量
-import './env';
 
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { Agent } from './agent';
-import { xiaohongshuService } from './xiaohongshuService';
+import { xiaohongshuService } from './factory/xiaohongshuService';
 import logger from './logger';
 
 const app = express();

@@ -1,7 +1,9 @@
 
-// 导入现有的 OpenAI 实例
-import { openai } from './openaiService';
-import logger from './logger';
+// 导入现有的 OpenAI 实例和环境变量
+import { openai } from '../openaiService';
+import { AI_TYPE } from '../env';
+import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from '../const';
+import logger from '../logger';
 
 interface XiaohongshuCopyRequest {
   scene: string;
@@ -38,7 +40,7 @@ class XiaohongshuService {
             content: prompt
           }
         ],
-        model: 'deepseek-chat',
+        model: AI_TYPE === "DEEPSEEK" ? DEEPSEEK_MODEl : CLAUDE_MODEL_4_6,
         temperature: 0.8,
         max_tokens: 1000
       });

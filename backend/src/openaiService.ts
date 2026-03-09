@@ -1,23 +1,31 @@
 import OpenAI from "openai";
 import logger from './logger';
-
+import { AI_TYPE, API_KEY,BASE_URL } from './env';
+import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from './const';
 
 // 创建OpenAI实例
-const apiKey = process.env.DEEPSEEK_API_KEY || '';
-if (!apiKey) {
-  console.error('DEEPSEEK_API_KEY environment variable is not set');
-  throw new Error('DEEPSEEK_API_KEY environment variable is required');
+if (!API_KEY) {
+  console.error(`AI_TYPE为${AI_TYPE}时，API_KEY environment variable is not set`);
+  throw new Error(`AI_TYPE为${AI_TYPE}时，API_KEY environment variable is required`);
+}
+if(AI_TYPE === "DEEPSEEK"){
+  logger.info('Using DeepSeek API');
+} else if(AI_TYPE === "ANTHROPIC"){
+  logger.info('Using Anthropic API');
+} else {
+  logger.error(`Invalid ${AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
+  throw new Error(`Invalid ${AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
 }
 
 // 直接创建OpenAI实例，确保在模块顶层正确初始化
 const openai = new OpenAI({
-  apiKey: apiKey,
-  baseURL: 'https://api.deepseek.com'
+  apiKey: API_KEY,
+  baseURL: BASE_URL,
 });
 
-console.log('OpenAI instance created successfully with DeepSeek API');
-console.log('Base URL:', 'https://api.deepseek.com');
-console.log('API Key configured:', apiKey ? 'Yes' : 'No');
+console.log('OpenAI instance created successfully with:', AI_TYPE);
+console.log('Base URL:', BASE_URL);
+console.log('API Key configured:', API_KEY ? 'Yes' : 'No');
 
 interface ChatRequest {
   messages: Array<{
@@ -70,7 +78,7 @@ export class OpenAIService {
 
       const completion = await openai.chat.completions.create({
         messages: request.messages,
-        model: request.model || 'deepseek-chat',
+        model: request.model || (AI_TYPE === "DEEPSEEK" ? DEEPSEEK_MODEl : CLAUDE_MODEL_4_6),
         temperature: request.temperature || 0.7,
         stream: false
       }) as OpenAI.ChatCompletion;
@@ -127,7 +135,7 @@ export class OpenAIService {
 
       const stream = await openai.chat.completions.create({
         messages: request.messages,
-        model: request.model || 'deepseek-chat',
+        model: request.model || (AI_TYPE === "DEEPSEEK" ? DEEPSEEK_MODEl : CLAUDE_MODEL_4_6),
         temperature: request.temperature || 0.7,
         stream: true
       });

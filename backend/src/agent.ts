@@ -1,8 +1,7 @@
-// 首先加载环境变量
-import './env';
 
 import { openaiService } from './openaiService';
-
+import { AI_TYPE } from './env';
+import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from './const';
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -44,7 +43,7 @@ export class Agent {
       const fullResponse = await openaiService.createChatCompletionStream(
         {
           messages: this.messages,
-          model: 'deepseek-chat',
+          model: AI_TYPE === "DEEPSEEK" ? DEEPSEEK_MODEl : CLAUDE_MODEL_4_6,
           temperature: 0.7,
           stream: true
         },
