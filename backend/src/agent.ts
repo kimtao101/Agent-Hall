@@ -1,7 +1,9 @@
 
 import { openaiService } from './AIService/openaiService';
+import { anthropicService } from './AIService/anthropicService';
 import { AI_TYPE } from './env';
 import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from './const';
+
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -40,15 +42,35 @@ export class Agent {
     this.addMessage('user', userInput);
 
     try {
-      const fullResponse = await openaiService.createChatCompletionStream(
-        {
-          messages: this.messages,
-          model: AI_TYPE === "DEEPSEEK" ? DEEPSEEK_MODEl : CLAUDE_MODEL_4_6,
-          temperature: 0.7,
-          stream: true
-        },
-        onChunk
-      );
+      let fullResponse: string;
+
+      if (AI_TYPE === "DEEPSEEK") {
+        fullResponse = await openaiService.createChatCompletionStream(
+          {
+            messages: this.messages,
+            model: DEEPSEEK_MODEl,
+            temperature: 0.7,
+            stream: true
+          },
+          onChunk
+        );
+      } else {
+        // Anthropic: system 作为顶层参数，messages 只含 user/assistant
+        const systemMessage = this.messages.find(m => m.role === 'system');
+        const chatMessages = this.messages
+          .filter(m => m.role !== 'system')
+          .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+        fullResponse = await anthropicService.createChatCompletionStream(
+          {
+            messages: chatMessages,
+            system: systemMessage?.content,
+            model: CLAUDE_MODEL_4_6,
+            max_tokens: 2048,
+          },
+          onChunk
+        );
+      }
 
       this.addMessage('assistant', fullResponse);
     } catch (error) {

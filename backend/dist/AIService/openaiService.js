@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.openai = exports.openaiService = exports.OpenAIService = void 0;
+exports.openaiInstance = exports.openaiService = exports.OpenAIService = void 0;
 const openai_1 = __importDefault(require("openai"));
 const logger_1 = __importDefault(require("../logger"));
 const env_1 = require("../env");
@@ -16,19 +16,16 @@ if (!env_1.API_KEY) {
 if (env_1.AI_TYPE === "DEEPSEEK") {
     logger_1.default.info('Using DeepSeek API');
 }
-else if (env_1.AI_TYPE === "ANTHROPIC") {
-    logger_1.default.info('Using Anthropic API');
-}
 else {
-    logger_1.default.error(`Invalid ${env_1.AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
-    throw new Error(`Invalid ${env_1.AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
+    logger_1.default.error(`Invalid ${env_1.AI_TYPE} environment variable. Please set it to "DEEPSEEK" `);
+    throw new Error(`Invalid ${env_1.AI_TYPE} environment variable. Please set it to "DEEPSEEK" `);
 }
 // 直接创建OpenAI实例，确保在模块顶层正确初始化
-const openai = new openai_1.default({
+const openaiInstance = new openai_1.default({
     apiKey: env_1.API_KEY,
     baseURL: env_1.BASE_URL,
 });
-exports.openai = openai;
+exports.openaiInstance = openaiInstance;
 class OpenAIService {
     /**
      * 发送聊天请求
@@ -47,14 +44,14 @@ class OpenAIService {
                     }))
                 }
             });
-            const completion = await openai.chat.completions.create({
+            const completion = await openaiInstance.chat.completions.create({
                 messages: request.messages,
-                model: request.model || (env_1.AI_TYPE === "DEEPSEEK" ? const_1.DEEPSEEK_MODEl : const_1.CLAUDE_MODEL_4_6),
+                model: request.model || const_1.DEEPSEEK_MODEl,
                 temperature: request.temperature || 0.7,
                 stream: false
             });
             const endTime = Date.now();
-            logger_1.default.info('Chat completion created successfully', {
+            logger_1.default.info('Chat DEEPSEEK completion created successfully', {
                 response: {
                     id: completion.id,
                     model: completion.model,
@@ -99,9 +96,9 @@ class OpenAIService {
                     }))
                 }
             });
-            const stream = await openai.chat.completions.create({
+            const stream = await openaiInstance.chat.completions.create({
                 messages: request.messages,
-                model: request.model || (env_1.AI_TYPE === "DEEPSEEK" ? const_1.DEEPSEEK_MODEl : const_1.CLAUDE_MODEL_4_6),
+                model: request.model || const_1.DEEPSEEK_MODEl,
                 temperature: request.temperature || 0.7,
                 stream: true
             });

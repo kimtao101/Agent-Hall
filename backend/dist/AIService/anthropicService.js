@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AnthropicService = void 0;
+exports.anthropicAiInstance = exports.anthropicService = exports.AnthropicService = void 0;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const logger_1 = __importDefault(require("../logger"));
 const env_1 = require("../env");
@@ -21,10 +21,11 @@ else {
     throw new Error(`Invalid ${env_1.AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
 }
 // 初始化客户端
-const client = new sdk_1.default({
+const anthropicAiInstance = new sdk_1.default({
     apiKey: env_1.API_KEY,
     baseURL: env_1.BASE_URL,
 });
+exports.anthropicAiInstance = anthropicAiInstance;
 class AnthropicService {
     /**
      * 建立聊天请求
@@ -44,7 +45,7 @@ class AnthropicService {
                 }
             });
             //非流式请求
-            const completion = await client.messages.create({
+            const completion = await anthropicAiInstance.messages.create({
                 messages: request.messages,
                 model: request.model || const_1.CLAUDE_MODEL_4_6,
                 max_tokens: request.max_tokens,
@@ -80,7 +81,7 @@ class AnthropicService {
                     }))
                 }
             });
-            const stream = await client.messages.create({
+            const stream = await anthropicAiInstance.messages.create({
                 messages: request.messages,
                 model: request.model || const_1.CLAUDE_MODEL_4_6,
                 max_tokens: request.max_tokens,
@@ -107,3 +108,5 @@ class AnthropicService {
     }
 }
 exports.AnthropicService = AnthropicService;
+// 导出单例实例
+exports.anthropicService = new AnthropicService();

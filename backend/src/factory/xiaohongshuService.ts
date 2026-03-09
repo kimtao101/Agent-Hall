@@ -1,7 +1,7 @@
 
 // 导入现有的 OpenAI 实例和环境变量
-import { openaiInstance } from '../AIService/openaiService';
-import { anthropicAiInstance } from '../AIService/AnthropicService';
+import { openaiService } from '../AIService/openaiService';
+import { anthropicService } from '../AIService/anthropicService';
 import { AI_TYPE } from '../env';
 import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from '../const';
 import logger from '../logger';
@@ -27,8 +27,11 @@ class XiaohongshuService {
 
       const prompt = this.getPromptForScene(scene, config);
       logger.info('Generated prompt', { prompt: prompt.substring(0, 200) + '...' });
-      if(AI_TYPE ==="DEEPSEEK"){
-          const response = await openaiInstance.chat.completions.create({
+      
+      let copy = '';
+      
+      if(AI_TYPE === "DEEPSEEK"){
+        const response = await openaiService.createChatCompletion({
           messages: [
             {
               role: 'system',
@@ -40,29 +43,35 @@ class XiaohongshuService {
             }
           ],
           model: DEEPSEEK_MODEl,
-          temperature: 0.8,
-          max_tokens: 1000
+          temperature: 0.8
         });
-        const copy = response.choices[0]?.message?.content || '';
-        logger.info('Generated copy successfully', { copy: copy.substring(0, 200) + '...' });
-        return { copy };
-      }else if(AI_TYPE === "ANTHROPIC"){
-        const completion = await anthropicAiInstance.messages.create({
+        copy = response.choices[0]?.message?.content || '';
+      } else if(AI_TYPE === "ANTHROPIC"){
+        const response = await anthropicService.createChatCompletion({
           messages: [
             {
               role: 'user',
               content: prompt
             }
           ],
+          system: '你是一位专业的小红书文案撰写专家，擅长撰写各种场景的优质文案。请根据用户提供的信息，生成符合小红书平台风格的文案，包含适当的表情符号、话题标签和互动引导语。',
           model: CLAUDE_MODEL_4_6,
-          max_tokens: 1000
+          max_tokens: 2000
         });
-        const copy = completion.content[0]?.text || '';
-        logger.info('Generated copy successfully', { copy: copy.substring(0, 200) + '...' });
-        return { copy };
-      }else{
-         return { copy: 'AI模型生成失败' };
+        // 处理Anthropic API的响应格式
+        if (typeof response === 'object' && response !== null) {
+          if ('content' in response && Array.isArray(response.content)) {
+            copy = response.content[0]?.text || '';
+          } else if ('choices' in response && Array.isArray(response.choices)) {
+            copy = response.choices[0]?.message?.content || '';
+          }
+        }
+      } else {
+        return { copy: 'AI模型生成失败' };
       }
+      
+      logger.info('Generated copy successfully', { copy: copy.substring(0, 200) + '...' });
+      return { copy };
     } catch (error) {
       logger.error('Error generating Xiaohongshu copy', { error });
       throw error;

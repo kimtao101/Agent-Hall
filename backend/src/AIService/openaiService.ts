@@ -1,25 +1,18 @@
 import OpenAI from "openai";
 import logger from '../logger';
-import { AI_TYPE, API_KEY,BASE_URL } from '../env';
-import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from '../const';
+import { AI_TYPE, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL } from '../env';
+import { DEEPSEEK_MODEl } from '../const';
 
-// 创建OpenAI实例
-if (!API_KEY) {
-  console.error(`AI_TYPE为${AI_TYPE}时，API_KEY environment variable is not set`);
-  throw new Error(`AI_TYPE为${AI_TYPE}时，API_KEY environment variable is required`);
-}
-if(AI_TYPE === "DEEPSEEK"){
+// 仅在 AI_TYPE=DEEPSEEK 时初始化，避免导入时崩溃
+let openaiInstance: OpenAI | null = null;
+
+if (AI_TYPE === "DEEPSEEK") {
   logger.info('Using DeepSeek API');
-} else {
-  logger.error(`Invalid ${AI_TYPE} environment variable. Please set it to "DEEPSEEK" `);
-  throw new Error(`Invalid ${AI_TYPE} environment variable. Please set it to "DEEPSEEK" `);
+  openaiInstance = new OpenAI({
+    apiKey: DEEPSEEK_API_KEY,
+    baseURL: DEEPSEEK_BASE_URL,
+  });
 }
-
-// 直接创建OpenAI实例，确保在模块顶层正确初始化
-const openaiInstance = new OpenAI({
-  apiKey: API_KEY,
-  baseURL: BASE_URL,
-});
 
 interface ChatRequest {
   messages: Array<{
@@ -54,10 +47,11 @@ interface ChatResponse {
 export class OpenAIService {
   /**
    * 发送聊天请求
-   * @param request 聊天请求参数
-   * @returns 聊天响应
    */
   public async createChatCompletion(request: ChatRequest): Promise<ChatResponse> {
+    if (!openaiInstance) {
+      throw new Error('OpenAI/DeepSeek service is not initialized. Set AI_TYPE=DEEPSEEK.');
+    }
     try {
       const startTime = Date.now();
       logger.info('Creating chat completion', {
@@ -72,7 +66,7 @@ export class OpenAIService {
 
       const completion = await openaiInstance.chat.completions.create({
         messages: request.messages,
-        model: request.model ||  DEEPSEEK_MODEl,
+        model: request.model || DEEPSEEK_MODEl,
         temperature: request.temperature || 0.7,
         stream: false
       }) as OpenAI.ChatCompletion;
@@ -86,7 +80,7 @@ export class OpenAIService {
             index: choice.index,
             message: {
               role: choice.message.role,
-              content: choice.message.content.substring(0, 100) + '...'
+              content: choice.message.content?.substring(0, 100) + '...'
             },
             finish_reason: choice.finish_reason
           })),
@@ -94,7 +88,7 @@ export class OpenAIService {
         },
         duration: endTime - startTime
       });
-      console.log(" openai.chat.completions",completion)
+      console.log("openai.chat.completions", completion);
       return completion;
     } catch (error) {
       logger.error('Error creating chat completion', {
@@ -107,14 +101,14 @@ export class OpenAIService {
 
   /**
    * 流式发送聊天请求
-   * @param request 聊天请求参数
-   * @param onChunk  chunks回调函数
-   * @returns 完整响应
    */
   public async createChatCompletionStream(
     request: ChatRequest,
     onChunk: (chunk: string) => void
   ): Promise<string> {
+    if (!openaiInstance) {
+      throw new Error('OpenAI/DeepSeek service is not initialized. Set AI_TYPE=DEEPSEEK.');
+    }
     try {
       const startTime = Date.now();
       logger.info('Creating streaming chat completion', {
@@ -129,11 +123,10 @@ export class OpenAIService {
 
       const stream = await openaiInstance.chat.completions.create({
         messages: request.messages,
-        model: request.model ||  DEEPSEEK_MODEl,
+        model: request.model || DEEPSEEK_MODEl,
         temperature: request.temperature || 0.7,
         stream: true
       });
-      console.log("ai--response--stream",stream)
 
       let fullResponse = '';
 
@@ -147,9 +140,7 @@ export class OpenAIService {
 
       const endTime = Date.now();
       logger.info('Streaming chat completion finished', {
-        response: {
-          content: fullResponse.substring(0, 100) + '...'
-        },
+        response: { content: fullResponse.substring(0, 100) + '...' },
         duration: endTime - startTime
       });
 

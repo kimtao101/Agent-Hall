@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.XiaohongshuService = exports.xiaohongshuService = void 0;
 // 导入现有的 OpenAI 实例和环境变量
 const openaiService_1 = require("../AIService/openaiService");
+const anthropicService_1 = require("../AIService/anthropicService");
 const env_1 = require("../env");
 const const_1 = require("../const");
 const logger_1 = __importDefault(require("../logger"));
@@ -21,22 +22,48 @@ class XiaohongshuService {
             logger_1.default.info('Generating Xiaohongshu copy', { scene, config });
             const prompt = this.getPromptForScene(scene, config);
             logger_1.default.info('Generated prompt', { prompt: prompt.substring(0, 200) + '...' });
-            const response = await openaiService_1.openai.chat.completions.create({
-                messages: [
-                    {
-                        role: 'system',
-                        content: '你是一位专业的小红书文案撰写专家，擅长撰写各种场景的优质文案。请根据用户提供的信息，生成符合小红书平台风格的文案，包含适当的表情符号、话题标签和互动引导语。'
-                    },
-                    {
-                        role: 'user',
-                        content: prompt
+            let copy = '';
+            if (env_1.AI_TYPE === "DEEPSEEK") {
+                const response = await openaiService_1.openaiService.createChatCompletion({
+                    messages: [
+                        {
+                            role: 'system',
+                            content: '你是一位专业的小红书文案撰写专家，擅长撰写各种场景的优质文案。请根据用户提供的信息，生成符合小红书平台风格的文案，包含适当的表情符号、话题标签和互动引导语。'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    model: const_1.DEEPSEEK_MODEl,
+                    temperature: 0.8
+                });
+                copy = response.choices[0]?.message?.content || '';
+            }
+            else if (env_1.AI_TYPE === "ANTHROPIC") {
+                const response = await anthropicService_1.anthropicService.createChatCompletion({
+                    messages: [
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    model: const_1.CLAUDE_MODEL_4_6,
+                    max_tokens: 1000
+                });
+                // 处理Anthropic API的响应格式
+                if (typeof response === 'object' && response !== null) {
+                    if ('content' in response && Array.isArray(response.content)) {
+                        copy = response.content[0]?.text || '';
                     }
-                ],
-                model: env_1.AI_TYPE === "DEEPSEEK" ? const_1.DEEPSEEK_MODEl : const_1.CLAUDE_MODEL_4_6,
-                temperature: 0.8,
-                max_tokens: 1000
-            });
-            const copy = response.choices[0]?.message?.content || '';
+                    else if ('choices' in response && Array.isArray(response.choices)) {
+                        copy = response.choices[0]?.message?.content || '';
+                    }
+                }
+            }
+            else {
+                return { copy: 'AI模型生成失败' };
+            }
             logger_1.default.info('Generated copy successfully', { copy: copy.substring(0, 200) + '...' });
             return { copy };
         }
