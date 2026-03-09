@@ -1,5 +1,5 @@
 
-import { openaiService } from './openaiService';
+import { openaiService } from './AIService/openaiService';
 import { AI_TYPE } from './env';
 import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from './const';
 interface Message {

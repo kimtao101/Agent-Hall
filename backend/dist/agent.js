@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Agent = void 0;
-const openaiService_1 = require("./openaiService");
+const openaiService_1 = require("./AIService/openaiService");
 const env_1 = require("./env");
 const const_1 = require("./const");
 class Agent {

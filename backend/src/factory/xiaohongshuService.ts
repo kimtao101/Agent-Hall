@@ -1,6 +1,7 @@
 
 // 导入现有的 OpenAI 实例和环境变量
-import { openai } from '../openaiService';
+import { openaiInstance } from '../AIService/openaiService';
+import { anthropicAiInstance } from '../AIService/AnthropicService';
 import { AI_TYPE } from '../env';
 import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from '../const';
 import logger from '../logger';
@@ -13,8 +14,6 @@ interface XiaohongshuCopyRequest {
 interface XiaohongshuCopyResponse {
   copy: string;
 }
-
-
 class XiaohongshuService {
   /**
    * 生成小红书文案
@@ -28,27 +27,42 @@ class XiaohongshuService {
 
       const prompt = this.getPromptForScene(scene, config);
       logger.info('Generated prompt', { prompt: prompt.substring(0, 200) + '...' });
-
-      const response = await openai.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: '你是一位专业的小红书文案撰写专家，擅长撰写各种场景的优质文案。请根据用户提供的信息，生成符合小红书平台风格的文案，包含适当的表情符号、话题标签和互动引导语。'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        model: AI_TYPE === "DEEPSEEK" ? DEEPSEEK_MODEl : CLAUDE_MODEL_4_6,
-        temperature: 0.8,
-        max_tokens: 1000
-      });
-
-      const copy = response.choices[0]?.message?.content || '';
-      logger.info('Generated copy successfully', { copy: copy.substring(0, 200) + '...' });
-
-      return { copy };
+      if(AI_TYPE ==="DEEPSEEK"){
+          const response = await openaiInstance.chat.completions.create({
+          messages: [
+            {
+              role: 'system',
+              content: '你是一位专业的小红书文案撰写专家，擅长撰写各种场景的优质文案。请根据用户提供的信息，生成符合小红书平台风格的文案，包含适当的表情符号、话题标签和互动引导语。'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          model: DEEPSEEK_MODEl,
+          temperature: 0.8,
+          max_tokens: 1000
+        });
+        const copy = response.choices[0]?.message?.content || '';
+        logger.info('Generated copy successfully', { copy: copy.substring(0, 200) + '...' });
+        return { copy };
+      }else if(AI_TYPE === "ANTHROPIC"){
+        const completion = await anthropicAiInstance.messages.create({
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          model: CLAUDE_MODEL_4_6,
+          max_tokens: 1000
+        });
+        const copy = completion.content[0]?.text || '';
+        logger.info('Generated copy successfully', { copy: copy.substring(0, 200) + '...' });
+        return { copy };
+      }else{
+         return { copy: 'AI模型生成失败' };
+      }
     } catch (error) {
       logger.error('Error generating Xiaohongshu copy', { error });
       throw error;

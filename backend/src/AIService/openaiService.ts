@@ -1,7 +1,7 @@
 import OpenAI from "openai";
-import logger from './logger';
-import { AI_TYPE, API_KEY,BASE_URL } from './env';
-import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from './const';
+import logger from '../logger';
+import { AI_TYPE, API_KEY,BASE_URL } from '../env';
+import { DEEPSEEK_MODEl, CLAUDE_MODEL_4_6 } from '../const';
 
 // 创建OpenAI实例
 if (!API_KEY) {
@@ -10,22 +10,16 @@ if (!API_KEY) {
 }
 if(AI_TYPE === "DEEPSEEK"){
   logger.info('Using DeepSeek API');
-} else if(AI_TYPE === "ANTHROPIC"){
-  logger.info('Using Anthropic API');
 } else {
-  logger.error(`Invalid ${AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
-  throw new Error(`Invalid ${AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
+  logger.error(`Invalid ${AI_TYPE} environment variable. Please set it to "DEEPSEEK" `);
+  throw new Error(`Invalid ${AI_TYPE} environment variable. Please set it to "DEEPSEEK" `);
 }
 
 // 直接创建OpenAI实例，确保在模块顶层正确初始化
-const openai = new OpenAI({
+const openaiInstance = new OpenAI({
   apiKey: API_KEY,
   baseURL: BASE_URL,
 });
-
-console.log('OpenAI instance created successfully with:', AI_TYPE);
-console.log('Base URL:', BASE_URL);
-console.log('API Key configured:', API_KEY ? 'Yes' : 'No');
 
 interface ChatRequest {
   messages: Array<{
@@ -76,15 +70,15 @@ export class OpenAIService {
         }
       });
 
-      const completion = await openai.chat.completions.create({
+      const completion = await openaiInstance.chat.completions.create({
         messages: request.messages,
-        model: request.model || (AI_TYPE === "DEEPSEEK" ? DEEPSEEK_MODEl : CLAUDE_MODEL_4_6),
+        model: request.model ||  DEEPSEEK_MODEl,
         temperature: request.temperature || 0.7,
         stream: false
       }) as OpenAI.ChatCompletion;
 
       const endTime = Date.now();
-      logger.info('Chat completion created successfully', {
+      logger.info('Chat DEEPSEEK completion created successfully', {
         response: {
           id: completion.id,
           model: completion.model,
@@ -133,9 +127,9 @@ export class OpenAIService {
         }
       });
 
-      const stream = await openai.chat.completions.create({
+      const stream = await openaiInstance.chat.completions.create({
         messages: request.messages,
-        model: request.model || (AI_TYPE === "DEEPSEEK" ? DEEPSEEK_MODEl : CLAUDE_MODEL_4_6),
+        model: request.model ||  DEEPSEEK_MODEl,
         temperature: request.temperature || 0.7,
         stream: true
       });
@@ -172,4 +166,4 @@ export class OpenAIService {
 
 // 导出单例实例
 export const openaiService = new OpenAIService();
-export { openai };
+export { openaiInstance };

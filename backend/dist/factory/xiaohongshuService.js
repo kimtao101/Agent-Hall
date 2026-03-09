@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.XiaohongshuService = exports.xiaohongshuService = void 0;
 // 导入现有的 OpenAI 实例和环境变量
-const openaiService_1 = require("../openaiService");
+const openaiService_1 = require("../AIService/openaiService");
 const env_1 = require("../env");
 const const_1 = require("../const");
 const logger_1 = __importDefault(require("../logger"));

@@ -22,7 +22,7 @@ if (AI_TYPE === "DEEPSEEK") {
 }
 else if (AI_TYPE === "ANTHROPIC") {
     exports.API_KEY = API_KEY = process.env.ANTHROPIC_API_KEY || "";
-    exports.BASE_URL = BASE_URL = 'https://api.aicodemirror.com/api/claudecode';
+    exports.BASE_URL = BASE_URL = 'https://api.anthropic.com/v1';
     console.log('Environment variables configured successfully for Anthropic API');
 }
 else {
