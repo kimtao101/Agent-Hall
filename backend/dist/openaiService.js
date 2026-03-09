@@ -4,40 +4,34 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.openai = exports.openaiService = exports.OpenAIService = void 0;
-// 其他模块导入
 const openai_1 = __importDefault(require("openai"));
-const winston_1 = __importDefault(require("winston"));
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
-const logsDir = path_1.default.join(__dirname, '..', 'logs');
-if (!fs_1.default.existsSync(logsDir)) {
-    fs_1.default.mkdirSync(logsDir, { recursive: true });
-}
-// 配置日志记录
-const logger = winston_1.default.createLogger({
-    level: 'info',
-    format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.json()),
-    transports: [
-        new winston_1.default.transports.Console(),
-        new winston_1.default.transports.File({ filename: 'logs/error.log', level: 'error' }),
-        new winston_1.default.transports.File({ filename: 'logs/combined.log' })
-    ]
-});
+const logger_1 = __importDefault(require("./logger"));
+const env_1 = require("./env");
+const const_1 = require("./const");
 // 创建OpenAI实例
-const apiKey = process.env.DEEPSEEK_API_KEY || '';
-if (!apiKey) {
-    console.error('DEEPSEEK_API_KEY environment variable is not set');
-    throw new Error('DEEPSEEK_API_KEY environment variable is required');
+if (!env_1.API_KEY) {
+    console.error(`AI_TYPE为${env_1.AI_TYPE}时，API_KEY environment variable is not set`);
+    throw new Error(`AI_TYPE为${env_1.AI_TYPE}时，API_KEY environment variable is required`);
+}
+if (env_1.AI_TYPE === "DEEPSEEK") {
+    logger_1.default.info('Using DeepSeek API');
+}
+else if (env_1.AI_TYPE === "ANTHROPIC") {
+    logger_1.default.info('Using Anthropic API');
+}
+else {
+    logger_1.default.error(`Invalid ${env_1.AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
+    throw new Error(`Invalid ${env_1.AI_TYPE} environment variable. Please set it to "DEEPSEEK" or "ANTHROPIC".`);
 }
 // 直接创建OpenAI实例，确保在模块顶层正确初始化
 const openai = new openai_1.default({
-    apiKey: apiKey,
-    baseURL: 'https://api.deepseek.com'
+    apiKey: env_1.API_KEY,
+    baseURL: env_1.BASE_URL,
 });
 exports.openai = openai;
-console.log('OpenAI instance created successfully with DeepSeek API');
-console.log('Base URL:', 'https://api.deepseek.com');
-console.log('API Key configured:', apiKey ? 'Yes' : 'No');
+console.log('OpenAI instance created successfully with:', env_1.AI_TYPE);
+console.log('Base URL:', env_1.BASE_URL);
+console.log('API Key configured:', env_1.API_KEY ? 'Yes' : 'No');
 class OpenAIService {
     /**
      * 发送聊天请求
@@ -47,7 +41,7 @@ class OpenAIService {
     async createChatCompletion(request) {
         try {
             const startTime = Date.now();
-            logger.info('Creating chat completion', {
+            logger_1.default.info('Creating chat completion', {
                 request: {
                     ...request,
                     messages: request.messages.map(msg => ({
@@ -58,12 +52,12 @@ class OpenAIService {
             });
             const completion = await openai.chat.completions.create({
                 messages: request.messages,
-                model: request.model || 'deepseek-chat',
+                model: request.model || (env_1.AI_TYPE === "DEEPSEEK" ? const_1.DEEPSEEK_MODEl : const_1.CLAUDE_MODEL_4_6),
                 temperature: request.temperature || 0.7,
                 stream: false
             });
             const endTime = Date.now();
-            logger.info('Chat completion created successfully', {
+            logger_1.default.info('Chat completion created successfully', {
                 response: {
                     id: completion.id,
                     model: completion.model,
@@ -83,7 +77,7 @@ class OpenAIService {
             return completion;
         }
         catch (error) {
-            logger.error('Error creating chat completion', {
+            logger_1.default.error('Error creating chat completion', {
                 error: error instanceof Error ? error.message : String(error),
                 stack: error instanceof Error ? error.stack : undefined
             });
@@ -99,7 +93,7 @@ class OpenAIService {
     async createChatCompletionStream(request, onChunk) {
         try {
             const startTime = Date.now();
-            logger.info('Creating streaming chat completion', {
+            logger_1.default.info('Creating streaming chat completion', {
                 request: {
                     ...request,
                     messages: request.messages.map(msg => ({
@@ -110,7 +104,7 @@ class OpenAIService {
             });
             const stream = await openai.chat.completions.create({
                 messages: request.messages,
-                model: request.model || 'deepseek-chat',
+                model: request.model || (env_1.AI_TYPE === "DEEPSEEK" ? const_1.DEEPSEEK_MODEl : const_1.CLAUDE_MODEL_4_6),
                 temperature: request.temperature || 0.7,
                 stream: true
             });
@@ -124,7 +118,7 @@ class OpenAIService {
                 }
             }
             const endTime = Date.now();
-            logger.info('Streaming chat completion finished', {
+            logger_1.default.info('Streaming chat completion finished', {
                 response: {
                     content: fullResponse.substring(0, 100) + '...'
                 },
@@ -133,7 +127,7 @@ class OpenAIService {
             return fullResponse;
         }
         catch (error) {
-            logger.error('Error creating streaming chat completion', {
+            logger_1.default.error('Error creating streaming chat completion', {
                 error: error instanceof Error ? error.message : String(error),
                 stack: error instanceof Error ? error.stack : undefined
             });

@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Agent = void 0;
-// 首先加载环境变量
-require("./env");
 const openaiService_1 = require("./openaiService");
+const env_1 = require("./env");
+const const_1 = require("./const");
 class Agent {
     constructor() {
         this.messages = [];
@@ -29,7 +29,7 @@ class Agent {
         try {
             const fullResponse = await openaiService_1.openaiService.createChatCompletionStream({
                 messages: this.messages,
-                model: 'deepseek-chat',
+                model: env_1.AI_TYPE === "DEEPSEEK" ? const_1.DEEPSEEK_MODEl : const_1.CLAUDE_MODEL_4_6,
                 temperature: 0.7,
                 stream: true
             }, onChunk);

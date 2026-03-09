@@ -3,26 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// 首先加载环境变量
-require("./env");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const agent_1 = require("./agent");
-const xiaohongshuService_1 = require("./xiaohongshuService");
-const winston_1 = __importDefault(require("winston"));
+const xiaohongshuService_1 = require("./factory/xiaohongshuService");
+const logger_1 = __importDefault(require("./logger"));
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 8015;
-// 配置日志记录
-const logger = winston_1.default.createLogger({
-    level: 'info',
-    format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.json()),
-    transports: [
-        new winston_1.default.transports.Console(),
-        new winston_1.default.transports.File({ filename: 'logs/error.log', level: 'error' }),
-        new winston_1.default.transports.File({ filename: 'logs/combined.log' })
-    ]
-});
+const PORT = 8015;
 // 确保logs目录存在
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
@@ -83,11 +71,11 @@ app.post('/chat', async (req, res) => {
     try {
         const { message } = req.body;
         if (!message || typeof message !== 'string') {
-            logger.warn('Invalid message parameter', { body: req.body });
+            logger_1.default.warn('Invalid message parameter', { body: req.body });
             res.status(400).json({ error: 'Invalid message' });
             return;
         }
-        logger.info('Received chat request', { message: message.substring(0, 100) + '...' });
+        logger_1.default.info('Received chat request', { message: message.substring(0, 100) + '...' });
         // Set headers for streaming response
         res.setHeader('Content-Type', 'text/plain');
         res.setHeader('Transfer-Encoding', 'chunked');
@@ -95,11 +83,11 @@ app.post('/chat', async (req, res) => {
         await agent.generateResponse(message, (chunk) => {
             res.write(chunk);
         });
-        logger.info('Chat response completed');
+        logger_1.default.info('Chat response completed');
         res.end();
     }
     catch (error) {
-        logger.error('Error in /chat endpoint:', {
+        logger_1.default.error('Error in /chat endpoint:', {
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined
         });
@@ -137,22 +125,22 @@ app.post('/xiaohongshu/copy', async (req, res) => {
     try {
         const { scene, config } = req.body;
         if (!scene || typeof scene !== 'string') {
-            logger.warn('Invalid scene parameter', { body: req.body });
+            logger_1.default.warn('Invalid scene parameter', { body: req.body });
             res.status(400).json({ error: 'Invalid scene' });
             return;
         }
         if (!config || typeof config !== 'object') {
-            logger.warn('Invalid config parameter', { body: req.body });
+            logger_1.default.warn('Invalid config parameter', { body: req.body });
             res.status(400).json({ error: 'Invalid config' });
             return;
         }
-        logger.info('Received Xiaohongshu copy request', { scene });
+        logger_1.default.info('Received Xiaohongshu copy request', { scene });
         const result = await xiaohongshuService_1.xiaohongshuService.generateCopy({ scene, config });
-        logger.info('Generated Xiaohongshu copy successfully');
+        logger_1.default.info('Generated Xiaohongshu copy successfully');
         res.json(result);
     }
     catch (error) {
-        logger.error('Error in /xiaohongshu/copy endpoint:', {
+        logger_1.default.error('Error in /xiaohongshu/copy endpoint:', {
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined
         });
@@ -174,11 +162,11 @@ app.post('/xiaohongshu/copy', async (req, res) => {
 app.get('/history', (req, res) => {
     try {
         const history = agent.getHistory();
-        logger.info('Retrieved chat history', { length: history.length });
+        logger_1.default.info('Retrieved chat history', { length: history.length });
         res.json(history);
     }
     catch (error) {
-        logger.error('Error in /history endpoint:', {
+        logger_1.default.error('Error in /history endpoint:', {
             error: error instanceof Error ? error.message : String(error)
         });
         res.status(500).json({ error: 'Internal server error' });
@@ -199,11 +187,11 @@ app.get('/history', (req, res) => {
 app.post('/clear', (req, res) => {
     try {
         agent.clearHistory();
-        logger.info('Cleared chat history');
+        logger_1.default.info('Cleared chat history');
         res.json({ success: true });
     }
     catch (error) {
-        logger.error('Error in /clear endpoint:', {
+        logger_1.default.error('Error in /clear endpoint:', {
             error: error instanceof Error ? error.message : String(error)
         });
         res.status(500).json({ error: 'Internal server error' });
@@ -211,7 +199,7 @@ app.post('/clear', (req, res) => {
 });
 // 错误处理中间件
 app.use((err, req, res, next) => {
-    logger.error('Unhandled error:', {
+    logger_1.default.error('Unhandled error:', {
         error: err.message,
         stack: err.stack,
         path: req.path
@@ -223,6 +211,6 @@ app.use((err, req, res, next) => {
 });
 // Start server
 app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`);
+    logger_1.default.info(`Server running on port ${PORT}`);
     console.log(`Server running on port ${PORT}`);
 });
